@@ -15,6 +15,7 @@ use futures_util::StreamExt;
 use uuid::{uuid, Uuid};
 
 use crate::gnss::GNSS_INFO_CHARACTERISTIC;
+use crate::remote::REMOTE_INFO_CHARACTERISTIC;
 
 use crate::types::LatLng;
 
@@ -23,6 +24,7 @@ const CCC_DESCRIPTOR_UUID: Uuid = uuid!("00002902-0000-1000-8000-00805f9b34fb");
 pub enum NotificationSource {
     GNSS,
     CameraControl,
+    Remote,
 }
 
 pub struct NotificationService {
@@ -51,6 +53,11 @@ impl NotificationService {
             NotificationSource::CameraControl => {
                 // Implement me.
             }
+            NotificationSource::Remote => {
+                println!("{:#?}", REMOTE_INFO_CHARACTERISTIC);
+                self.camera
+                    .subscribe(&REMOTE_INFO_CHARACTERISTIC).await?;
+            }
         }
 
         Ok(())
@@ -59,6 +66,7 @@ impl NotificationService {
     pub async fn get_single_notification(&self) -> Result<ValueNotification, anyhow::Error> {
         let stream = self.camera.notifications().await?;
         let lastmsg = stream.take(1).next().await.unwrap();
+        println!("{:#?}", lastmsg);
 
         Ok(lastmsg)
     }

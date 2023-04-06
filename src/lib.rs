@@ -14,6 +14,7 @@ use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use camera_control::CameraControlService;
 use gnss::GnssService;
 use notification::{NotificationService, NotificationSource};
+use remote::RemoteService;
 
 #[macro_use]
 extern crate lazy_static;
@@ -21,6 +22,7 @@ extern crate lazy_static;
 mod camera_control;
 mod gnss;
 mod notification;
+mod remote;
 pub mod types;
 
 pub struct Camera {
@@ -28,6 +30,7 @@ pub struct Camera {
     notification_svc: NotificationService,
     gnss_svc: GnssService,
     camera_control_svc: CameraControlService,
+    remote_svc: RemoteService,
 }
 
 impl Camera {
@@ -58,7 +61,6 @@ impl Camera {
             }
         }
 
-        println!("{:?}", cameras);
         Ok(cameras)
     }
 
@@ -71,20 +73,26 @@ impl Camera {
                 let notification_svc = NotificationService::new(camera.clone());
                 let gnss_svc = GnssService::new(camera.clone());
                 let camera_control_svc = CameraControlService::new(camera.clone());
+                let remote_svc = RemoteService::new(camera.clone());
 
                 Self {
                     camera,
                     notification_svc,
                     gnss_svc,
                     camera_control_svc,
+                    remote_svc,
                 }
             })
             .collect())
     }
 
     pub async fn init(&self) -> Result<(), anyhow::Error> {
+        if !self.camera.is_connected().await? {
+            self.camera.connect().await?;
+        }
         // Subscribe to notifications
         self.notification_svc.subscribe(NotificationSource::GNSS).await?;
+        self.notification_svc.subscribe(NotificationSource::Remote).await?;
 
         Ok(())
     }
@@ -100,6 +108,10 @@ impl Camera {
 
     pub fn get_gnss_service(&self) -> &GnssService {
         &self.gnss_svc
+    }
+
+    pub fn get_notification_service(&self) -> &NotificationService {
+        &self.notification_svc
     }
 }
 
@@ -121,6 +133,16 @@ mod tests {
         camera.init().await.unwrap();
         camera.get_gnss_service().send_location(&everest).await.unwrap();
         //camera.get_gnss_service().wait_for_request().await.unwrap();
+    }
 
+    #[tokio::test]
+    async fn receive_notification() {
+        let cameras = Camera::new().await.unwrap();
+        let camera = cameras.get(0).unwrap();
+
+        camera.init().await.unwrap();
+        println!("Now, press the button!!");
+        let foo = camera.get_notification_service().get_single_notification().await.unwrap();
+        println!("{:?}", foo);
     }
 }
