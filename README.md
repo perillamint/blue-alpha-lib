@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC0-1.0
 -->
 
 # Blue Alpha Lib
-![logo](./img/blue-alpha-lib.png)
+![logo](./img/blue-alpha-lib.svg)
 
 BTLE communication library for Sony Alpha series cameras, written in Rust.
 
