@@ -13,16 +13,19 @@ use btleplug::platform::{Adapter, Manager, Peripheral};
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use camera_control::CameraControlService;
 use gnss::GnssService;
+use notification::{NotificationService, NotificationSource};
 
 #[macro_use]
 extern crate lazy_static;
 
 mod camera_control;
 mod gnss;
+mod notification;
 pub mod types;
 
 pub struct Camera {
     camera: Arc<Peripheral>,
+    notification_svc: NotificationService,
     gnss_svc: GnssService,
     camera_control_svc: CameraControlService,
 }
@@ -39,13 +42,14 @@ impl Camera {
         let mut cameras: Vec<Peripheral> = vec![];
         for p in central.peripherals().await? {
             if let Some(properties) = p.properties().await? {
-                if let Some(sonydata) = properties.manufacturer_data.get(&0x2d01) {
+                if let Some(sonydata) = properties.manufacturer_data.get(&0x012d) {
                     match (
                         LittleEndian::read_u16(&sonydata[0..2]),
                         sonydata[2],
                         String::from_utf8(sonydata[3..5].to_vec())?,
                     ) {
-                        (0x012D, _protocol_version, _model) => {
+                        (0x0003, _protocol_version, _model) => {
+                            p.discover_services().await?;
                             cameras.push(p);
                         }
                         (_, _, _) => {} // Not a sony camera. skip.
@@ -54,6 +58,7 @@ impl Camera {
             }
         }
 
+        println!("{:?}", cameras);
         Ok(cameras)
     }
 
@@ -63,16 +68,25 @@ impl Camera {
             .into_iter()
             .map(|p| {
                 let camera = Arc::new(p);
+                let notification_svc = NotificationService::new(camera.clone());
                 let gnss_svc = GnssService::new(camera.clone());
                 let camera_control_svc = CameraControlService::new(camera.clone());
 
                 Self {
                     camera,
+                    notification_svc,
                     gnss_svc,
                     camera_control_svc,
                 }
             })
             .collect())
+    }
+
+    pub async fn init(&self) -> Result<(), anyhow::Error> {
+        // Subscribe to notifications
+        self.notification_svc.subscribe(NotificationSource::GNSS).await?;
+
+        Ok(())
     }
 
     pub async fn get_name(&self) -> Result<String, anyhow::Error> {
@@ -83,19 +97,30 @@ impl Camera {
             .local_name
             .ok_or_else(|| anyhow::anyhow!("name not found"))
     }
-}
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+    pub fn get_gnss_service(&self) -> &GnssService {
+        &self.gnss_svc
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::types::LatLng;
+
     use super::*;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    #[tokio::test]
+    async fn search_and_send_latlng() {
+        let cameras = Camera::new().await.unwrap();
+        let camera = cameras.get(0).unwrap();
+        let everest = LatLng {
+            latitude: 27.988056,
+            longitude: 86.925278,
+        };
+
+        camera.init().await.unwrap();
+        camera.get_gnss_service().send_location(&everest).await.unwrap();
+        //camera.get_gnss_service().wait_for_request().await.unwrap();
+
     }
 }

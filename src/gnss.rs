@@ -11,12 +11,13 @@ use btleplug::api::{CharPropFlags, Characteristic, WriteType};
 use btleplug::platform::Peripheral;
 use byteorder::{BigEndian, ByteOrder};
 use chrono::{DateTime, Datelike, FixedOffset, Local, Timelike, Utc};
+use futures_util::StreamExt;
 use uuid::{uuid, Uuid};
 
 use crate::types::LatLng;
 
 const GNSS_SERVICE_UUID: Uuid = uuid!("8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF");
-const GNSS_INFO_CHARACTERISTIC: Characteristic = Characteristic {
+pub(crate) const GNSS_INFO_CHARACTERISTIC: Characteristic = Characteristic {
     uuid: uuid_from_u16(0xDD01),
     service_uuid: GNSS_SERVICE_UUID,
     properties: CharPropFlags::NOTIFY,
@@ -88,7 +89,7 @@ fn gnss_payload(latlng: &LatLng, now: &DateTime<Local>, include_tz: bool) -> Vec
     data
 }
 
-pub(crate) struct GnssService {
+pub struct GnssService {
     camera: Arc<Peripheral>,
 }
 
