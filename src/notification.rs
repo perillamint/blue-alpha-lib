@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+use std::pin::Pin;
 use std::sync::Arc;
 
 use btleplug::api::{bleuuid::uuid_from_u16, Peripheral as _};
@@ -11,7 +12,7 @@ use btleplug::api::{CharPropFlags, Characteristic, WriteType, ValueNotification}
 use btleplug::platform::Peripheral;
 use byteorder::{BigEndian, ByteOrder};
 use chrono::{DateTime, Datelike, FixedOffset, Local, Timelike, Utc};
-use futures_util::StreamExt;
+use futures_util::{StreamExt, Stream};
 use uuid::{uuid, Uuid};
 
 use crate::gnss::GNSS_INFO_CHARACTERISTIC;
@@ -61,6 +62,11 @@ impl NotificationService {
         }
 
         Ok(())
+    }
+
+    pub async fn get_stream(&self) -> Result<Pin<Box<dyn Stream<Item = ValueNotification> + 'static>>, anyhow::Error> {
+        let stream = self.camera.notifications().await?;
+        Ok(stream)
     }
 
     pub async fn get_single_notification(&self) -> Result<ValueNotification, anyhow::Error> {
