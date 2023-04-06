@@ -15,24 +15,24 @@ use uuid::{uuid, Uuid};
 
 use crate::types::LatLng;
 
-const LOCATION_SERVICE_UUID: Uuid = uuid!("8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF");
-const LOCATION_INFO_CHARACTERISTIC: Characteristic = Characteristic {
+const GNSS_SERVICE_UUID: Uuid = uuid!("8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF");
+const GNSS_INFO_CHARACTERISTIC: Characteristic = Characteristic {
     uuid: uuid_from_u16(0xDD01),
-    service_uuid: LOCATION_SERVICE_UUID,
+    service_uuid: GNSS_SERVICE_UUID,
     properties: CharPropFlags::NOTIFY,
 };
-const LOCATION_NOTIFY_CHARACTERISTIC: Characteristic = Characteristic {
+const GNSS_NOTIFY_CHARACTERISTIC: Characteristic = Characteristic {
     uuid: uuid_from_u16(0xDD11),
-    service_uuid: LOCATION_SERVICE_UUID,
+    service_uuid: GNSS_SERVICE_UUID,
     properties: CharPropFlags::WRITE,
 };
-const LOCATION_FEATURE_CHARACTERISTIC: Characteristic = Characteristic {
+const GNSS_FEATURE_CHARACTERISTIC: Characteristic = Characteristic {
     uuid: uuid_from_u16(0xDD21),
-    service_uuid: LOCATION_SERVICE_UUID,
+    service_uuid: GNSS_SERVICE_UUID,
     properties: CharPropFlags::READ,
 };
 
-fn location_payload(latlng: &LatLng, now: &DateTime<Local>, include_tz: bool) -> Vec<u8> {
+fn gnss_payload(latlng: &LatLng, now: &DateTime<Local>, include_tz: bool) -> Vec<u8> {
     // Payload format reference: https://github.com/whc2001/ILCE7M3ExternalGps/blob/main/PROTOCOL_EN.md
     let mut data: Vec<u8> = match include_tz {
         true => vec![0; 95],
@@ -88,24 +88,24 @@ fn location_payload(latlng: &LatLng, now: &DateTime<Local>, include_tz: bool) ->
     data
 }
 
-pub(crate) struct LocationService {
+pub(crate) struct GnssService {
     camera: Arc<Peripheral>,
 }
 
-impl LocationService {
+impl GnssService {
     pub fn new(camera: Arc<Peripheral>) -> Self {
         Self { camera }
     }
 
     pub async fn send_location(&self, latlng: &LatLng) -> Result<(), anyhow::Error> {
         let now = Local::now();
-        let payload = location_payload(latlng, &now, true);
+        let payload = gnss_payload(latlng, &now, true);
 
         // TODO: Find out camera requires timezone offset.
 
         self.camera
             .write(
-                &LOCATION_NOTIFY_CHARACTERISTIC,
+                &GNSS_NOTIFY_CHARACTERISTIC,
                 &payload,
                 WriteType::WithResponse,
             )

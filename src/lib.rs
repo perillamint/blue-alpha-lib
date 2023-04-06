@@ -12,18 +12,18 @@ use btleplug::api::{
 use btleplug::platform::{Adapter, Manager, Peripheral};
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use camera_control::CameraControlService;
-use location::LocationService;
+use gnss::GnssService;
 
 #[macro_use]
 extern crate lazy_static;
 
 mod camera_control;
-mod location;
+mod gnss;
 pub mod types;
 
 pub struct Camera {
     camera: Arc<Peripheral>,
-    location_svc: LocationService,
+    gnss_svc: GnssService,
     camera_control_svc: CameraControlService,
 }
 
@@ -63,12 +63,12 @@ impl Camera {
             .into_iter()
             .map(|p| {
                 let camera = Arc::new(p);
-                let location_svc = LocationService::new(camera.clone());
+                let gnss_svc = GnssService::new(camera.clone());
                 let camera_control_svc = CameraControlService::new(camera.clone());
 
                 Self {
                     camera,
-                    location_svc,
+                    gnss_svc,
                     camera_control_svc,
                 }
             })
