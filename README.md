@@ -18,4 +18,4 @@ BTLE communication library for Sony Alpha series cameras, written in Rust.
 * Camera control information read API
 
 # License
-blue-alpha-lib is covered under MPL-2.0 License, except its logo.
+blue-alpha-lib is covered under MPL-2.0 License, except its logo is licensed under CC-BY-SA 4.0
