@@ -10,4 +10,12 @@ SPDX-License-Identifier: CC0-1.0
 BTLE communication library for Sony Alpha series cameras, written in Rust.
 
 # Features
-TODO: Document me
+## Implemented
+* GNSS coordinate and time API
+
+## Planned
+* Remote control API
+* Camera control information read API
+
+# License
+blue-alpha-lib is covered under MPL-2.0 License, except its logo.
